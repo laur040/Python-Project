@@ -11,7 +11,74 @@
     <div id="registry-container">
         <ul id="registry-tree"></ul>
     </div>
+    <script>
+        async function loadRegistry(path = null) {
+            try {
+                const url = path ? `/api/register?path=${path}` : `/api/register`;
+                const response = await fetch(url);
+                const data = await response.json();
+                console.log(data);
 
+                if (data.error) {
+                    console.error("Error loading registry:", data.error);
+                    return;
+        }
+
+                if (!path) {
+
+                    const tree = document.getElementById('registry-tree');
+                    for (const key in data) {
+                        const li = document.createElement('li');
+                        li.textContent = key;
+                        li.dataset.path = key;
+                        li.addEventListener('click', handleRegistryClick);
+                        tree.appendChild(li);
+                    }
+                } else {
+
+                const new_path = path.replace(/\\/g, '\\\\');
+                const parentLi = document.querySelector(`li[data-path="${new_path}"]`);
+
+                const ul = document.createElement('ul');
+
+                const keys = Object.keys(data[path]);
+                for (const subkey of keys) {
+                        const li = document.createElement('li');
+                        li.textContent = subkey;
+                        li.dataset.path = `${path}\\${subkey}`;
+                        li.addEventListener('click', handleRegistryClick);
+                        ul.appendChild(li);
+
+                    }
+
+                    if(parentLi){
+                         parentLi.appendChild(ul);
+                    }
+
+
+                }
+            } catch (error) {
+                console.error("Error loading registry:", error);
+            }
+        }
+
+        function handleRegistryClick(event) {
+
+            event.stopPropagation();
+            const path = this.dataset.path;
+            const subkey_list = this.querySelector('ul');
+
+            if (!subkey_list) {
+                loadRegistry(path);
+            }
+            else{
+                this.removeChild(subkey_list);
+            }
+        }
+
+        loadRegistry();
+
+    </script>
 
 </body>
 </html>
