@@ -1,0 +1,16 @@
+#mainscreen-container{
+    display: flex;
+    flex-direction: row;
+}
+
+#registry-container{
+    width: 50%;
+}
+
+#value-container{
+    width: 50%;
+}
+
+th{
+    min-width: 4em;
+}
