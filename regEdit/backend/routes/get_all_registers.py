@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 import winreg
 
-register_bp = Blueprint("register", __name__)
+register_key_bp = Blueprint("register_key", __name__)
 
 def get_subkeys(path):
     subkeys = []
@@ -38,7 +38,6 @@ def get_subkeys(path):
                 while True:
                     try:
                         subkey = winreg.EnumKey(reg_key, index)
-                        print(subkey)
                         subkeys.append(subkey)
                         index += 1
                     except OSError:
@@ -49,7 +48,7 @@ def get_subkeys(path):
 
 
 
-@register_bp.route("/api/register", methods=["GET"])
+@register_key_bp.route("/api/keys", methods=["GET"])
 def get_registry_subkeys():
     path = request.args.get("path")
     if not path:
