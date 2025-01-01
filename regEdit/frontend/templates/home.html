@@ -4,10 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registry Tree</title>
-<!--    <link rel="stylesheet" href="home.css">-->
     <link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}" />
 </head>
 <body>
+    <div id="navbar">
+        <button id="New">New</button>
+        <button id="Rename">Rename</button>
+        <button id="Edit">Find</button>
+        <button id="Delete">Delete</button>
+    </div>
+    <div id="last-key">Current key: None selected</div>
     <div id="mainscreen-container">
         <div id="registry-container">
             <ul id="registry-tree"></ul>
@@ -27,7 +33,119 @@
         </div>
     </div>
 
+    <div class="overlay" id="overlay"></div>
+
+    <div class="popup" id="options-popup">
+        <button id="key-option">Key</button>
+        <button id="value-option">Value</button>
+    </div>
+
+    <div class="popup" id="key-popup">
+        <label for="path-input-key">Path:</label>
+        <input type="text" id="path-input-key">
+        <label for="name-input-key">Name:</label>
+        <input type="text" id="name-input-key">
+        <button id="save-btn-key">Save</button>
+        <button id="cancel-btn-key">Cancel</button>
+    </div>
+
+    <div class="popup" id="value-popup">
+        <label for="path-input-val">Path:</label>
+        <input type="text" id="path-input-val">
+        <label for="name-input-val">Name:</label>
+        <input type="text" id="name-input-val">
+        <label for="type-val">Type:</label>
+        <select id="type-val">
+            <option value="REG_SZ">REG_SZ</option>
+            <option value="REG_DWORD">REG_DWORD</option>
+            <option value="REG_MULTI_SZ">REG_MULTI_SZ</option>
+            <option value="REG_BINARY">REG_BINARY</option>
+        </select>
+        <label for="content-val">Content:</label>
+        <input type="text" id="content-val">
+        <button id="save-btn-val">Save</button>
+        <button id="cancel-btn-val">Cancel</button>
+    </div>
+
     <script>
+        let last_key = null;
+
+        document.getElementById('New').addEventListener('click', function () {
+
+            document.getElementById('options-popup').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+
+            const rect = document.getElementById('New').getBoundingClientRect();
+            document.getElementById('options-popup').style.top = `${rect.bottom + window.scrollY}px`;
+            document.getElementById('options-popup').style.left = `${rect.left + window.scrollX}px`;
+
+
+        });
+
+        document.getElementById('key-option').addEventListener('click', function () {
+
+            document.getElementById('options-popup').style.display = 'none';
+            document.getElementById('key-popup').style.display = 'block';
+
+            const rect = document.getElementById('New').getBoundingClientRect();
+            document.getElementById('key-popup').style.top = `${rect.bottom + window.scrollY}px`;
+            document.getElementById('key-popup').style.left = `${rect.left + window.scrollX}px`;
+
+            if (last_key) {
+                document.getElementById('path-input-key').value = last_key.dataset.path;
+            }
+        });
+
+        document.getElementById('value-option').addEventListener('click', function () {
+
+            document.getElementById('options-popup').style.display = 'none';
+            document.getElementById('value-popup').style.display = 'block';
+
+            const rect = document.getElementById('New').getBoundingClientRect();
+            document.getElementById('value-popup').style.top = `${rect.bottom + window.scrollY}px`;
+            document.getElementById('value-popup').style.left = `${rect.left + window.scrollX}px`;
+
+            if (last_key) {
+                document.getElementById('path-input-val').value = last_key.dataset.path;
+            }
+        });
+
+        document.getElementById('cancel-btn-key').addEventListener('click', function () {
+             document.getElementById('key-popup').style.display = 'none';
+             document.getElementById('overlay').style.display = 'none';
+        });
+
+        document.getElementById('save-btn-key').addEventListener('click', function () {
+
+            const path = document.getElementById('path-input-key').value;
+            const name = document.getElementById('name-input-val').value;
+
+            console.log(`Saved: Path = ${path}, Name = ${name}`);
+
+             document.getElementById('key-popup').style.display = 'none';
+             document.getElementById('overlay').style.display = 'none';
+        });
+
+        document.getElementById('cancel-btn-val').addEventListener('click', function () {
+             document.getElementById('value-popup').style.display = 'none';
+             document.getElementById('overlay').style.display = 'none';
+        });
+
+        document.getElementById('save-btn-val').addEventListener('click', function () {
+            const path = document.getElementById('path-input-val').value;
+            const name = document.getElementById('name-input-val').value;
+            const type = document.getElementById('type-val').value;
+            const content = document.getElementById('content-val').value;
+
+            createValue(path, name, type, content);
+<!--            console.log(`Saved Value: Path = ${path}, Name = ${name}, Type = ${type}, Content = ${content}`);-->
+
+            document.getElementById('value-popup').style.display = 'none';
+            overlay.style.display = 'none';
+        });
+
+        overlay.addEventListener('click', function () {});
+
         async function loadRegistry(path = null) {
             try {
                 const url = path ? `/api/keys?path=${path}` : `/api/keys`;
@@ -51,8 +169,12 @@
                     }
 
                 } else {
+
                 const new_path = path.replace(/\\/g, '\\\\');
                 const parentLi = document.querySelector(`li[data-path="${new_path}"]`);
+
+                const selected_key = document.getElementById('last-key');
+                selected_key.innerHTML = `Current key: ${parentLi.dataset.path}`;
 
                 const ul = document.createElement('ul');
 
@@ -80,6 +202,7 @@
         function handleRegistryClick(event) {
             event.stopPropagation();
             const path = this.dataset.path;
+            last_key = this;
             const subkey_list = this.querySelector('ul');
 
             if (!subkey_list) {
@@ -137,9 +260,38 @@
         return types[type] || "Unknown";
     }
 
+    loadRegistry();
+
+    async function createValue(path, name, type, content) {
+        const endpoint = "/api/values";
+        const data = { path: path,
+                       name: name,
+                       type: type,
+                       content: content
+                        };
+
+        try {
+            const response = await fetch(endpoint, { method: "POST",
+                                headers: {  "Content-Type": "application/json"},
+                                body: JSON.stringify(data)
+                                });
 
 
-        loadRegistry();
+            if (response.ok) {
+                const result = await response.json();
+                console.log(result.message);
+
+             } else {
+                const error = await response.json();
+                console.error(error.error);
+                alert("Error creating value: " + error.error);
+            }
+        } catch (err) {
+             console.error("Network error:", err);
+             alert("Failed connection to server");
+    }
+}
+
 
     </script>
 
