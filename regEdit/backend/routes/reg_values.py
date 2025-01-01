@@ -97,3 +97,29 @@ def delete_value():
             return jsonify({"message": f"Value '{name}' deleted successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@register_val_bp.route("/api/values", methods=["PUT"])
+def rename_value():
+    data = request.json
+    path = data.get("key")
+    old_name = data.get("old_name")
+    new_name = data.get("new_name")
+
+    try:
+        if "\\" not in path:
+            key_name = path
+            subpath = ""
+        else:
+            key_name, subpath = path.split("\\", 1)
+
+        main_key = getattr(winreg, key_name)
+
+        with winreg.OpenKey(main_key, subpath, 0, winreg.KEY_READ | winreg.KEY_WRITE) as key:
+            value_data, value_type = winreg.QueryValueEx(key, old_name)
+            winreg.SetValueEx(key, new_name, 0, value_type, value_data)
+            winreg.DeleteValue(key, old_name)
+
+        return jsonify({"message": f"Value '{old_name}' renamed to '{new_name}' successfully."}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -72,6 +72,13 @@
         <button id="value-rename">Rename</button>
     </div>
 
+    <div id="rename-popup" class="popup">
+        <label for="rename-value">New Name:</label>
+        <input type="text" id="rename-value">
+        <button id="rename-save-btn">Save</button>
+        <button id="rename-cancel-btn">Cancel</button>
+    </div>
+
     <script>
         let last_key = null;
         let selected_val = null;
@@ -189,6 +196,29 @@
                 document.getElementById('value-menu').style.display = "none";
             }
         });
+
+        <!--Rename Value Button-->
+        document.getElementById("value-rename").addEventListener("click", function () {
+            if (selected_val) {
+                document.getElementById('rename-value').value = selected_val;
+                document.getElementById("rename-popup").style.display = 'block';
+                document.getElementById('overlay').style.display = 'block';
+            }
+
+            document.getElementById('value-menu').style.display = 'none';
+        });
+
+        document.getElementById("rename-save-btn").addEventListener("click", function () {
+            new_name = document.getElementById('rename-value').value;
+            if(new_name){
+                renameValue(selected_val, last_key.dataset.path, new_name);
+                document.getElementById('rename-popup').style.display = 'none';
+                document.getElementById('overlay').style.display = 'none';
+            }
+            document.getElementById('value-menu').style.display = 'none';
+        });
+
+
 
         <!-- Load Keys -->
         async function loadRegistry(path = null) {
@@ -365,8 +395,35 @@
              console.error("Network error:", err);
              alert("Failed connection to server");
         }
-        }
+    }
+        async function renameValue(old_name, key, new_name) {
+        const endpoint = "/api/values";
+        const data = { old_name: old_name,
+                       key: key,
+                       new_name: new_name
+                        };
 
+        try {
+            const response = await fetch(endpoint, { method: "PUT",
+                                headers: {  "Content-Type": "application/json"},
+                                body: JSON.stringify(data)
+                                });
+
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log(result.message);
+
+             } else {
+                const error = await response.json();
+                console.error(error.error);
+                alert("Error renaming value: " + error.error);
+            }
+        } catch (err) {
+             console.error("Network error:", err);
+             alert("Failed connection to server");
+    }
+}
 
 
 
