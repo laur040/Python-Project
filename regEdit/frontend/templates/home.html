@@ -120,6 +120,24 @@
             }
         });
 
+        <!-- Cancel New Key -->
+        document.getElementById('cancel-btn-key').addEventListener('click', function () {
+             document.getElementById('key-popup').style.display = 'none';
+             document.getElementById('overlay').style.display = 'none';
+        });
+
+        <!-- Save New Key -->
+        document.getElementById('save-btn-key').addEventListener('click', function () {
+
+            const path = document.getElementById('path-input-key').value;
+            const name = document.getElementById('name-input-key').value;
+
+            createKey(name, path);
+
+            document.getElementById('key-popup').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+        });
+
         <!--New Value Popup-->
         document.getElementById('value-option').addEventListener('click', function () {
 
@@ -133,24 +151,6 @@
             if (last_key) {
                 document.getElementById('path-input-val').value = last_key.dataset.path;
             }
-        });
-
-        <!-- Cancel New Key -->
-        document.getElementById('cancel-btn-key').addEventListener('click', function () {
-             document.getElementById('key-popup').style.display = 'none';
-             document.getElementById('overlay').style.display = 'none';
-        });
-
-        <!-- Save New Key -->
-        document.getElementById('save-btn-key').addEventListener('click', function () {
-
-            const path = document.getElementById('path-input-key').value;
-            const name = document.getElementById('name-input-val').value;
-
-            console.log(`Saved: Path = ${path}, Name = ${name}`);
-
-             document.getElementById('key-popup').style.display = 'none';
-             document.getElementById('overlay').style.display = 'none';
         });
 
         <!-- Cancel New Value -->
@@ -486,6 +486,34 @@
                 const error = await response.json();
                 console.error(error.error);
                 alert("Error editing value: " + error.error);
+            }
+        } catch (err) {
+             console.error("Network error:", err);
+             alert("Failed connection to server");
+    }
+}
+
+        async function createKey(name, path) {
+        const endpoint = "/api/keys";
+        const data = { path: path,
+                       name: name
+                        };
+
+        try {
+            const response = await fetch(endpoint, { method: "POST",
+                                headers: {  "Content-Type": "application/json"},
+                                body: JSON.stringify(data)
+                                });
+
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log(result.message);
+
+             } else {
+                const error = await response.json();
+                console.error(error.error);
+                alert("Error creating key: " + error.error);
             }
         } catch (err) {
              console.error("Network error:", err);

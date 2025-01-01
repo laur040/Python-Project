@@ -63,4 +63,23 @@ def get_registry_subkeys():
         return jsonify({"error" : rez["message"]}), 400
     return jsonify({path: rez["subkeys"]})
 
+@register_key_bp.route("/api/keys", methods=["POST"])
+def create_key():
+    data = request.json
+    path = data.get("path")
+    name = data.get("name")
 
+    try:
+        if "\\" not in path:
+            key_name = path
+            subpath = ""
+        else:
+            key_name, subpath = path.split("\\", 1)
+
+        main_key = getattr(winreg, key_name)
+
+        with winreg.CreateKey(main_key, subpath + "\\" + name) as new_key:
+            return jsonify({"message": f"Key '{key_name}' created successfully"}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
