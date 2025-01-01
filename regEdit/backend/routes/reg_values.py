@@ -76,3 +76,24 @@ def create_value():
             return jsonify({"message": f"Value '{name}' created successfully"}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@register_val_bp.route("/api/values", methods=["DELETE"])
+def delete_value():
+    data = request.json
+    path = data.get("key")
+    name = data.get("name")
+
+    try:
+        if "\\" not in path:
+            key_name = path
+            subpath = ""
+        else:
+            key_name, subpath = path.split("\\", 1)
+
+        main_key = getattr(winreg, key_name)
+
+        with winreg.OpenKey(main_key, subpath, 0, winreg.KEY_WRITE) as key:
+            winreg.DeleteValue(key, name)
+            return jsonify({"message": f"Value '{name}' deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
