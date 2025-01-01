@@ -35,7 +35,7 @@
 
     <div class="overlay" id="overlay"></div>
 
-    <div class="popup" id="options-popup">
+    <div class="popup" id="new-options-popup">
         <button id="key-option">Key</button>
         <button id="value-option">Value</button>
     </div>
@@ -87,6 +87,15 @@
         <button id="edit-cancel-btn">Cancel</button>
     </div>
 
+
+
+    <div class="popup" id="delete-popup">
+        <label for="key-delete">Delete the following key:</label>
+        <input type="text" id="key-delete">
+        <button id="delete-save-btn">Save</button>
+        <button id="delete-cancel-btn">Cancel</button>
+    </div>
+
     <script>
         let last_key = null;
         let selected_val = null;
@@ -95,12 +104,12 @@
         <!--New Button-->
         document.getElementById('New').addEventListener('click', function () {
 
-            document.getElementById('options-popup').style.display = 'block';
+            document.getElementById('new-options-popup').style.display = 'block';
             document.getElementById('overlay').style.display = 'block';
 
             const rect = document.getElementById('New').getBoundingClientRect();
-            document.getElementById('options-popup').style.top = `${rect.bottom + window.scrollY}px`;
-            document.getElementById('options-popup').style.left = `${rect.left + window.scrollX}px`;
+            document.getElementById('new-options-popup').style.top = `${rect.bottom + window.scrollY}px`;
+            document.getElementById('new-options-popup').style.left = `${rect.left + window.scrollX}px`;
 
 
         });
@@ -108,7 +117,7 @@
         <!--New Key Popup-->
         document.getElementById('key-option').addEventListener('click', function () {
 
-            document.getElementById('options-popup').style.display = 'none';
+            document.getElementById('new-options-popup').style.display = 'none';
             document.getElementById('key-popup').style.display = 'block';
 
             const rect = document.getElementById('New').getBoundingClientRect();
@@ -257,6 +266,30 @@
             }
             document.getElementById('value-menu').style.display = 'none';
         });
+
+
+        <!--Delete Button-->
+        document.getElementById('Delete').addEventListener('click', function () {
+
+            document.getElementById('delete-popup').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+            document.getElementById('key-delete').value = last_key.dataset.path;
+
+            const rect = document.getElementById('Delete').getBoundingClientRect();
+            document.getElementById('delete-popup').style.top = `${rect.bottom + window.scrollY}px`;
+            document.getElementById('delete-popup').style.left = `${rect.left + window.scrollX}px`;
+        });
+
+        <!--Save Change Button Delete-->
+        document.getElementById("delete-save-btn").addEventListener("click", function () {
+            deleted_key = document.getElementById('key-delete').value;
+            if(deleted_key){
+                deleteKey(deleted_key);
+                document.getElementById('delete-popup').style.display = 'none';
+                document.getElementById('overlay').style.display = 'none';
+            }
+        });
+
 
         <!-- Load Keys -->
         async function loadRegistry(path = null) {
@@ -520,6 +553,32 @@
              alert("Failed connection to server");
     }
 }
+
+        async function deleteKey(key) {
+        const endpoint = "/api/keys";
+        const data = { key: key };
+
+       try {
+            const response = await fetch(endpoint, { method: "DELETE",
+                                headers: {  "Content-Type": "application/json"},
+                                body: JSON.stringify(data)
+                                });
+
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log(result.message);
+
+             } else {
+                const error = await response.json();
+                console.error(error.error);
+                alert("Error deleting key: " + error.error);
+            }
+        } catch (err) {
+             console.error("Network error:", err);
+             alert("Failed connection to server");
+        }
+    }
 
 
 

@@ -83,3 +83,24 @@ def create_key():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@register_key_bp.route("/api/keys", methods=["DELETE"])
+def delete_key():
+    data = request.json
+    path = data.get("key")
+
+    try:
+        if "\\" not in path:
+            key_name = path
+            subpath = ""
+        else:
+            key_name, subpath = path.split("\\", 1)
+
+        main_key = getattr(winreg, key_name)
+
+
+        winreg.DeleteKey(main_key, subpath)
+        return jsonify({"message": f"Key '{path}' deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
