@@ -70,13 +70,21 @@
     <div id="value-menu" class="popup">
         <button id="value-delete">Delete</button>
         <button id="value-rename">Rename</button>
+        <button id="value-edit" style="display: none;">Edit</button>
     </div>
 
     <div id="rename-popup" class="popup">
-        <label for="rename-value">New Name:</label>
+        <label for="rename-value">New Value Name:</label>
         <input type="text" id="rename-value">
         <button id="rename-save-btn">Save</button>
         <button id="rename-cancel-btn">Cancel</button>
+    </div>
+
+    <div id="edit-popup" class="popup">
+        <label for="edit-value">New Value Content:</label>
+        <input type="text" id="edit-value">
+        <button id="edit-save-btn">Save</button>
+        <button id="edit-cancel-btn">Cancel</button>
     </div>
 
     <script>
@@ -170,6 +178,18 @@
         document.querySelector("#values-table tbody").addEventListener("contextmenu", function (event) {
             const clickedCell = event.target.closest("td");
 
+            const row = clickedCell.parentElement;
+            const typeCell = row.children[1];
+
+            const isEditable = typeCell && typeCell.textContent === "REG_SZ";
+            const editButton = document.getElementById('value-edit');
+
+            if (isEditable) {
+                editButton.style.display = "block";
+            } else {
+                editButton.style.display = "none";
+            }
+
             if (clickedCell && clickedCell.cellIndex === 0) {
                 event.preventDefault();
 
@@ -208,6 +228,7 @@
             document.getElementById('value-menu').style.display = 'none';
         });
 
+        <!--Rename Save Button-->
         document.getElementById("rename-save-btn").addEventListener("click", function () {
             new_name = document.getElementById('rename-value').value;
             if(new_name){
@@ -218,7 +239,24 @@
             document.getElementById('value-menu').style.display = 'none';
         });
 
+        <!--Edit Popup-->
+        document.getElementById("value-edit").addEventListener("click", function () {
+            document.getElementById("edit-popup").style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
 
+            document.getElementById('value-menu').style.display = 'none';
+        });
+
+        <!--Save Button Edit-->
+        document.getElementById("edit-save-btn").addEventListener("click", function () {
+            new_val = document.getElementById('edit-value').value;
+            if(new_val){
+                editValue(selected_val, last_key.dataset.path, new_val);
+                document.getElementById('edit-popup').style.display = 'none';
+                document.getElementById('overlay').style.display = 'none';
+            }
+            document.getElementById('value-menu').style.display = 'none';
+        });
 
         <!-- Load Keys -->
         async function loadRegistry(path = null) {
@@ -418,6 +456,36 @@
                 const error = await response.json();
                 console.error(error.error);
                 alert("Error renaming value: " + error.error);
+            }
+        } catch (err) {
+             console.error("Network error:", err);
+             alert("Failed connection to server");
+    }
+}
+
+
+        async function editValue(val_name, key, new_data) {
+        const endpoint = "/api/values/edit";
+        const data = { val_name: val_name,
+                       key: key,
+                       new_data: new_data
+                        };
+
+        try {
+            const response = await fetch(endpoint, { method: "PUT",
+                                headers: {  "Content-Type": "application/json"},
+                                body: JSON.stringify(data)
+                                });
+
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log(result.message);
+
+             } else {
+                const error = await response.json();
+                console.error(error.error);
+                alert("Error editing value: " + error.error);
             }
         } catch (err) {
              console.error("Network error:", err);
