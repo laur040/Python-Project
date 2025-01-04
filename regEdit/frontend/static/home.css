@@ -1,10 +1,17 @@
+html, body{
+    height: 100%;
+    overflow: hidden;
+}
 #mainscreen-container{
     display: flex;
     flex-direction: row;
+     height: 100%;
 }
 
 #registry-container{
     width: 50%;
+    height: 93%;
+    overflow-y: auto;
 }
 
 #value-container{

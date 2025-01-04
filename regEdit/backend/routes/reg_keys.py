@@ -99,8 +99,98 @@ def delete_key():
 
         main_key = getattr(winreg, key_name)
 
-
-        winreg.DeleteKey(main_key, subpath)
+        delete_key_rec(main_key, subpath)
         return jsonify({"message": f"Key '{path}' deleted successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@register_key_bp.route("/api/keys", methods=["PUT"])
+def rename_key():
+    data = request.json
+    path = data.get("path")
+    new_name = data.get("new_name")
+
+    try:
+        if "\\" not in path:
+            return jsonify({"error": "Invalid path format"}), 400
+
+        key_name, subpath = path.split("\\", 1)
+
+        if "\\" in subpath:
+            parent_path, old_key_name = subpath.rsplit("\\", 1)
+        else:
+            parent_path = ""
+            old_key_name = subpath
+
+        main_key = getattr(winreg, key_name)
+        print(parent_path)
+        print(new_name)
+
+        with winreg.OpenKey(main_key, parent_path, 0, winreg.KEY_READ | winreg.KEY_WRITE) as parent_key:
+            with winreg.CreateKey(parent_key, new_name) as new_key:
+                with winreg.OpenKey(parent_key, old_key_name, 0, winreg.KEY_READ) as old_key:
+                    index = 0
+                    while True:
+                        try:
+                            value_name, value_data, value_type = winreg.EnumValue(old_key, index)
+                            winreg.SetValueEx(new_key, value_name, 0, value_type, value_data)
+                            index += 1
+                        except OSError:
+                            break
+
+
+                    index = 0
+                    while True:
+                        try:
+                            subkey_name = winreg.EnumKey(old_key, index)
+                            with winreg.OpenKey(old_key, subkey_name) as subkey:
+                                with winreg.CreateKey(new_key, subkey_name) as new_subkey:
+                                    copy_key_rec(subkey, new_subkey)
+                            index += 1
+                        except OSError:
+                            break
+
+            delete_key_rec(parent_key, old_key_name)
+
+        return jsonify({"message": f"Key renamed to '{new_name}' successfully"}), 200
+
+    except PermissionError:
+        return jsonify({"error": f"Access denied for key {old_key_name}"}), 403
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+def copy_key_rec(old_key, new_key):
+    index = 0
+    while True:
+        try:
+            value_name, value_data, value_type = winreg.EnumValue(old_key, index)
+            winreg.SetValueEx(new_key, value_name, 0, value_type, value_data)
+            index += 1
+        except OSError:
+            break
+
+    index = 0
+    while True:
+        try:
+            subkey_name = winreg.EnumKey(old_key, index)
+            with winreg.OpenKey(old_key, subkey_name) as subkey:
+                with winreg.CreateKey(new_key, subkey_name) as new_subkey:
+                    copy_key_rec(subkey, new_subkey)
+            index += 1
+        except OSError:
+            break
+
+def delete_key_rec(parent_key, key_name):
+    try:
+        with winreg.OpenKey(parent_key, key_name, 0, winreg.KEY_READ | winreg.KEY_WRITE) as key:
+            while True:
+                try:
+                    subkey_name = winreg.EnumKey(key, 0)
+                    delete_key_rec(key, subkey_name)
+
+                except OSError:
+                    break
+        winreg.DeleteKey(parent_key, key_name)
+
+    except Exception as e:
+        print(f"Error deleting key {key_name}: {e}")
