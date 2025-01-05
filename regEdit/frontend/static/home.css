@@ -52,16 +52,15 @@ th{
     margin-right: 5px;
 }
 
-#rename-popup{
+#rename-popup, #edit-popup {
     position: fixed;
-    top: 50%;
+    top: 40%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-40%, -50%);
 }
 
-#edit-popup{
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
+
+
+
+
+

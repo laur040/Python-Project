@@ -156,10 +156,13 @@
         <!-- Save New Key -->
         document.getElementById('save-btn-key').addEventListener('click', function () {
 
-            const path = document.getElementById('path-input-key').value;
+            let path = document.getElementById('path-input-key').value;
             const name = document.getElementById('name-input-key').value;
 
             createKey(name, path);
+            simulateClickOnKey(path);
+            path = path + "\\" + name;
+            expandRegistryPath(path);
 
             document.getElementById('key-popup').style.display = 'none';
             document.getElementById('overlay').style.display = 'none';
@@ -241,6 +244,7 @@
             if (selected_val) {
                 deleteValue(selected_val, last_key.dataset.path);
                 document.getElementById('value-menu').style.display = "none";
+                loadRegistryValues(last_key.dataset.path);
             }
         });
 
@@ -255,15 +259,23 @@
             document.getElementById('value-menu').style.display = 'none';
         });
 
-        <!-- Rename Save Button -->
+        <!-- Rename Value Save Button -->
         document.getElementById("rename-save-btn").addEventListener("click", function () {
             new_name = document.getElementById('rename-value').value;
             if(new_name){
                 renameValue(selected_val, last_key.dataset.path, new_name);
                 document.getElementById('rename-popup').style.display = 'none';
                 document.getElementById('overlay').style.display = 'none';
+                loadRegistryValues(last_key.dataset.path);
             }
             document.getElementById('value-menu').style.display = 'none';
+        });
+
+        <!-- Cancel Rename Value -->
+        document.getElementById('rename-cancel-btn').addEventListener('click', function () {
+             document.getElementById('rename-popup').style.display = 'none';
+             document.getElementById('overlay').style.display = 'none';
+             document.getElementById('value-menu').style.display = 'none';
         });
 
         <!-- Edit Popup -->
@@ -281,8 +293,16 @@
                 editValue(selected_val, last_key.dataset.path, new_val);
                 document.getElementById('edit-popup').style.display = 'none';
                 document.getElementById('overlay').style.display = 'none';
+                loadRegistryValues(last_key.dataset.path);
             }
             document.getElementById('value-menu').style.display = 'none';
+        });
+
+        <!-- Cancel Button Edit -->
+        document.getElementById('edit-cancel-btn').addEventListener('click', function () {
+             document.getElementById('edit-popup').style.display = 'none';
+             document.getElementById('overlay').style.display = 'none';
+             document.getElementById('value-menu').style.display = 'none';
         });
 
         <!-- Find Popup -->
@@ -302,43 +322,63 @@
         document.getElementById("find-save-btn").addEventListener("click", function () {
             val_to_find = document.getElementById('find-value').value;
             path_to_find = document.getElementById('find-key-path').value;
-            if(val_to_find){
+
+            if(val_to_find && path_to_find){
                 findValue(val_to_find, path_to_find);
                 document.getElementById('find-popup').style.display = 'none';
                 document.getElementById('overlay').style.display = 'none';
             }
-
         });
 
-        <!-- Delete Button -->
-        document.getElementById('Delete').addEventListener('click', function () {
+        <!-- Cancel Button Find -->
+        document.getElementById('find-cancel-btn').addEventListener('click', function () {
+             document.getElementById('find-popup').style.display = 'none';
+             document.getElementById('overlay').style.display = 'none';
+        });
 
+        <!-- Delete Key Button -->
+        document.getElementById('Delete').addEventListener('click', function () {
             document.getElementById('delete-popup').style.display = 'block';
             document.getElementById('overlay').style.display = 'block';
+            if(last_key){
             document.getElementById('key-delete').value = last_key.dataset.path;
+            }
 
             const rect = document.getElementById('Delete').getBoundingClientRect();
             document.getElementById('delete-popup').style.top = `${rect.bottom + window.scrollY}px`;
             document.getElementById('delete-popup').style.left = `${rect.left + window.scrollX}px`;
         });
 
-        <!-- Save Change Button Delete -->
+        <!-- Save Change Button Delete Key-->
         document.getElementById("delete-save-btn").addEventListener("click", function () {
             deleted_key = document.getElementById('key-delete').value;
             if(deleted_key){
                 deleteKey(deleted_key);
+                parent_key = deleted_key.substring(0, deleted_key.lastIndexOf("\\"));
+                simulateClickOnKey(parent_key);
+                expandRegistryPath(parent_key);
                 document.getElementById('delete-popup').style.display = 'none';
                 document.getElementById('overlay').style.display = 'none';
             }
         });
 
+        <!-- Cancel Delete Key -->
+        document.getElementById('delete-cancel-btn').addEventListener('click', function () {
+             document.getElementById('delete-popup').style.display = 'none';
+             document.getElementById('overlay').style.display = 'none';
+        });
+
         <!-- Rename Key Button -->
         document.getElementById("Rename").addEventListener("click", function () {
+            document.getElementById("rename-key-popup").style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
             if (last_key) {
                 document.getElementById('rename-key-path').value = last_key.dataset.path;
-                document.getElementById("rename-key-popup").style.display = 'block';
-                document.getElementById('overlay').style.display = 'block';
             }
+
+            const rect = document.getElementById('Rename').getBoundingClientRect();
+            document.getElementById('rename-key-popup').style.top = `${rect.bottom + window.scrollY}px`;
+            document.getElementById('rename-key-popup').style.left = `${rect.left + window.scrollX}px`;
         });
 
          <!-- Save Rename Key Button -->
@@ -347,9 +387,22 @@
             path = document.getElementById('rename-key-path').value;
             if(new_name && path){
                 renameKey(path, new_name);
+                console.log(path);
+                parent_key = path.substring(0, path.lastIndexOf("\\"));
+                console.log(parent_key);
+                simulateClickOnKey(parent_key);
+
+                expandRegistryPath(parent_key);
+
                 document.getElementById('rename-key-popup').style.display = 'none';
                 document.getElementById('overlay').style.display = 'none';
             }
+        });
+
+        <!-- Cancel Rename Key -->
+        document.getElementById('rename-key-cancel-btn').addEventListener('click', function () {
+             document.getElementById('rename-key-popup').style.display = 'none';
+             document.getElementById('overlay').style.display = 'none';
         });
 
 
@@ -489,6 +542,13 @@
         }
     }
 }
+    function simulateClickOnKey(path) {
+    const li = document.querySelector(`li[data-path="${path.replace(/\\/g, '\\\\')}"]`);
+
+    if (li) {
+        li.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    }
+    }
 
 
     async function createValue(path, name, type, content) {
