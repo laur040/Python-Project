@@ -148,3 +148,61 @@ def edit_value():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@register_val_bp.route("/api/values/find", methods=["GET"])
+def find_value():
+    val_name = request.args.get("val_name")
+    key_path = request.args.get("key")
+
+    if not val_name or not key_path:
+        return jsonify({"error": "Both 'val_name' and 'key' are required"}), 400
+
+    try:
+        if "\\" not in key_path:
+            key_name = key_path
+            subpath = ""
+        else:
+            key_name, subpath = key_path.split("\\", 1)
+
+        main_key = getattr(winreg, key_name)
+
+        found_path = search_value_rec(main_key, subpath, val_name, key_name)
+        if found_path:
+            return jsonify({"message": f"Value '{val_name}' found in key: {found_path}", "path": found_path}), 200
+        else:
+            return jsonify({"error": f"Value '{val_name}' not found in key '{key_path}' or its subkeys"}), 404
+
+    except PermissionError:
+        return jsonify({"error": "Access denied"}), 403
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def search_value_rec(parent_key, subpath, val_name, root_key_name):
+    try:
+        with winreg.OpenKey(parent_key, subpath, 0, winreg.KEY_READ) as key:
+            index = 0
+            while True:
+                try:
+                    value_name, _, _ = winreg.EnumValue(key, index)
+                    if value_name == val_name:
+                        return f"{root_key_name}\\{subpath}" if subpath else root_key_name
+                    index += 1
+                except OSError:
+                    break
+
+            index = 0
+            while True:
+                try:
+                    subkey_name = winreg.EnumKey(key, index)
+                    next_subpath = f"{subpath}\\{subkey_name}" if subpath else subkey_name
+                    found = search_value_rec(parent_key, next_subpath, val_name, root_key_name)
+                    if found:
+                        return found
+                    index += 1
+                except OSError:
+                    break
+
+    except PermissionError:
+        print(f"Access denied to key: {subpath}. Skipping key")
+        return None

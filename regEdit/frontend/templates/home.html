@@ -10,7 +10,7 @@
     <div id="navbar">
         <button id="New">New</button>
         <button id="Rename">Rename</button>
-        <button id="Edit">Find</button>
+        <button id="Find">Find</button>
         <button id="Delete">Delete</button>
     </div>
     <div id="last-key">Current key: None selected</div>
@@ -87,6 +87,15 @@
         <button id="edit-cancel-btn">Cancel</button>
     </div>
 
+    <div id="find-popup" class="popup">
+        <label for="find-value">Search for Value:</label>
+        <input type="text" id="find-value">
+        <label for="find-key-path">Search in Key:</label>
+        <input type="text" id="find-key-path">
+        <button id="find-save-btn">Find</button>
+        <button id="find-cancel-btn">Cancel</button>
+    </div>
+
 
 
     <div class="popup" id="delete-popup">
@@ -156,7 +165,7 @@
             document.getElementById('overlay').style.display = 'none';
         });
 
-        <!--New Value Popup-->
+        <!-- New Value Popup -->
         document.getElementById('value-option').addEventListener('click', function () {
 
             document.getElementById('new-options-popup').style.display = 'none';
@@ -192,7 +201,7 @@
 
         overlay.addEventListener('click', function () {});
 
-        <!--Value Menu Popup-->
+        <!-- Value Menu Popup -->
         document.querySelector("#values-table tbody").addEventListener("contextmenu", function (event) {
             const clickedCell = event.target.closest("td");
 
@@ -227,7 +236,7 @@
             }
         });
 
-        <!--Delete Value Button-->
+        <!-- Delete Value Button -->
         document.getElementById("value-delete").addEventListener("click", function () {
             if (selected_val) {
                 deleteValue(selected_val, last_key.dataset.path);
@@ -235,7 +244,7 @@
             }
         });
 
-        <!--Rename Value Button-->
+        <!-- Rename Value Button -->
         document.getElementById("value-rename").addEventListener("click", function () {
             if (selected_val) {
                 document.getElementById('rename-value').value = selected_val;
@@ -246,7 +255,7 @@
             document.getElementById('value-menu').style.display = 'none';
         });
 
-        <!--Rename Save Button-->
+        <!-- Rename Save Button -->
         document.getElementById("rename-save-btn").addEventListener("click", function () {
             new_name = document.getElementById('rename-value').value;
             if(new_name){
@@ -257,7 +266,7 @@
             document.getElementById('value-menu').style.display = 'none';
         });
 
-        <!--Edit Popup-->
+        <!-- Edit Popup -->
         document.getElementById("value-edit").addEventListener("click", function () {
             document.getElementById("edit-popup").style.display = 'block';
             document.getElementById('overlay').style.display = 'block';
@@ -265,7 +274,7 @@
             document.getElementById('value-menu').style.display = 'none';
         });
 
-        <!--Save Button Edit-->
+        <!-- Save Button Edit -->
         document.getElementById("edit-save-btn").addEventListener("click", function () {
             new_val = document.getElementById('edit-value').value;
             if(new_val){
@@ -276,8 +285,32 @@
             document.getElementById('value-menu').style.display = 'none';
         });
 
+        <!-- Find Popup -->
+        document.getElementById("Find").addEventListener("click", function () {
+            document.getElementById("find-popup").style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+            if(last_key){
+                document.getElementById('find-key-path').value = last_key.dataset.path;
+            }
 
-        <!--Delete Button-->
+            const rect = document.getElementById('Find').getBoundingClientRect();
+            document.getElementById('find-popup').style.top = `${rect.bottom + window.scrollY}px`;
+            document.getElementById('find-popup').style.left = `${rect.left + window.scrollX}px`;
+        });
+
+        <!-- Save Button Find -->
+        document.getElementById("find-save-btn").addEventListener("click", function () {
+            val_to_find = document.getElementById('find-value').value;
+            path_to_find = document.getElementById('find-key-path').value;
+            if(val_to_find){
+                findValue(val_to_find, path_to_find);
+                document.getElementById('find-popup').style.display = 'none';
+                document.getElementById('overlay').style.display = 'none';
+            }
+
+        });
+
+        <!-- Delete Button -->
         document.getElementById('Delete').addEventListener('click', function () {
 
             document.getElementById('delete-popup').style.display = 'block';
@@ -289,7 +322,7 @@
             document.getElementById('delete-popup').style.left = `${rect.left + window.scrollX}px`;
         });
 
-        <!--Save Change Button Delete-->
+        <!-- Save Change Button Delete -->
         document.getElementById("delete-save-btn").addEventListener("click", function () {
             deleted_key = document.getElementById('key-delete').value;
             if(deleted_key){
@@ -299,7 +332,7 @@
             }
         });
 
-        <!--Rename Key Button-->
+        <!-- Rename Key Button -->
         document.getElementById("Rename").addEventListener("click", function () {
             if (last_key) {
                 document.getElementById('rename-key-path').value = last_key.dataset.path;
@@ -308,7 +341,7 @@
             }
         });
 
-         <!--Save Rename Key Button-->
+         <!-- Save Rename Key Button -->
         document.getElementById("rename-key-save-btn").addEventListener("click", function () {
             new_name = document.getElementById('rename-key-new-name').value;
             path = document.getElementById('rename-key-path').value;
@@ -439,6 +472,24 @@
 
     loadRegistry();
 
+    async function expandRegistryPath(fullPath) {
+    const segments = fullPath.split("\\");
+    let currentPath = "";
+
+    for (let i = 0; i < segments.length; i++) {
+        currentPath = currentPath ? `${currentPath}\\${segments[i]}` : segments[i];
+
+        const li = document.querySelector(`li[data-path="${currentPath.replace(/\\/g, '\\\\')}"]`);
+
+        if (li) {
+            const subkeyList = li.querySelector("ul");
+            if (!subkeyList) {
+                await loadRegistry(currentPath);
+            }
+        }
+    }
+}
+
 
     async function createValue(path, name, type, content) {
         const endpoint = "/api/values";
@@ -548,6 +599,32 @@
                 const error = await response.json();
                 console.error(error.error);
                 alert("Error editing value: " + error.error);
+            }
+        } catch (err) {
+             console.error("Network error:", err);
+             alert("Failed connection to server");
+    }
+}
+
+        async function findValue(val_name, key) {
+        const endpoint = `/api/values/find?val_name=${encodeURIComponent(val_name)}&key=${encodeURIComponent(key)}`;
+
+        try {
+            const response = await fetch(endpoint, { method: "GET" });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log(result.message);
+
+                const path = result.path;
+                console.log(`Loading values from key: ${path}`);
+                await expandRegistryPath(path);
+                await loadRegistryValues(path);
+
+             } else {
+                const error = await response.json();
+                console.error(error.error);
+                alert("Error finding value: " + error.error);
             }
         } catch (err) {
              console.error("Network error:", err);
