@@ -1,7 +1,30 @@
 html, body{
     height: 100%;
     overflow: hidden;
+    margin: 0;
+    padding: 0;
 }
+
+#navbar{
+    padding: 10px;
+}
+
+#navbar button{
+    margin-right: 5px;
+    padding: 2px;
+    border: none;
+    background: none;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 15px;
+    border-bottom-style: dotted;
+}
+
+#last-key{
+    border-bottom-style: double;
+     border-top-style: double;
+    padding: 10px;
+}
+
 #mainscreen-container{
     display: flex;
     flex-direction: row;
@@ -10,12 +33,18 @@ html, body{
 
 #registry-container{
     width: 50%;
-    height: 93%;
+    height: 90%;
+    border-right-style: double;
     overflow-y: auto;
 }
 
 #value-container{
     width: 50%;
+    overflow-x: auto;
+}
+
+#values-table{
+     margin: 15px;
 }
 
 th{
@@ -26,6 +55,7 @@ th{
     display: none;
     position: absolute;
     border: 1px solid black;
+    border-radius: 10px;
     padding: 10px;
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
     background: white;
@@ -57,6 +87,17 @@ th{
     top: 40%;
     left: 50%;
     transform: translate(-40%, -50%);
+}
+
+#value-menu button{
+    display: block;
+    width: 100%;
+    margin: 5px;
+
+}
+
+button{
+    font-family: "Times New Roman", Times, serif;  
 }
 
 

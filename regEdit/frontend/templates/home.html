@@ -132,6 +132,16 @@
 
         });
 
+        document.addEventListener('click', function (event) {
+            const popup = document.getElementById('new-options-popup');
+            const overlay = document.getElementById('overlay');
+
+            if (popup.style.display === 'block' && !popup.contains(event.target) && event.target.id !== 'New') {
+                popup.style.display = 'none';
+                overlay.style.display = 'none';
+            }
+        });
+
         <!--New Key Popup-->
         document.getElementById('key-option').addEventListener('click', function () {
 
