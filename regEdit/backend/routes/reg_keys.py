@@ -7,14 +7,14 @@ def get_subkeys(path):
     subkeys = []
 
     try:
-        top_level_keys = {"HKEY_CLASSES_ROOT": winreg.HKEY_CLASSES_ROOT,
-            "HKEY_CURRENT_USER": winreg.HKEY_CURRENT_USER,
-            "HKEY_LOCAL_MACHINE": winreg.HKEY_LOCAL_MACHINE,
-            "HKEY_USERS": winreg.HKEY_USERS,
-            "HKEY_CURRENT_CONFIG": winreg.HKEY_CURRENT_CONFIG}
+        main_keys = {"HKEY_CLASSES_ROOT": winreg.HKEY_CLASSES_ROOT,
+                    "HKEY_CURRENT_USER": winreg.HKEY_CURRENT_USER,
+                    "HKEY_LOCAL_MACHINE": winreg.HKEY_LOCAL_MACHINE,
+                    "HKEY_USERS": winreg.HKEY_USERS,
+                    "HKEY_CURRENT_CONFIG": winreg.HKEY_CURRENT_CONFIG}
 
-        if path in top_level_keys:
-            key = top_level_keys[path]
+        if path in main_keys:
+            key = main_keys[path]
             with winreg.OpenKey(key, "") as reg_key:
                 index = 0
                 while True:
@@ -53,10 +53,10 @@ def get_registry_subkeys():
     path = request.args.get("path")
     if not path:
         return jsonify({"HKEY_CLASSES_ROOT": [],
-            "HKEY_CURRENT_USER": [],
-            "HKEY_LOCAL_MACHINE": [],
-            "HKEY_USERS": [],
-            "HKEY_CURRENT_CONFIG": []})
+                        "HKEY_CURRENT_USER": [],
+                        "HKEY_LOCAL_MACHINE": [],
+                        "HKEY_USERS": [],
+                        "HKEY_CURRENT_CONFIG": []})
 
     rez = get_subkeys(path)
     if rez["error"] == "True":
@@ -78,8 +78,19 @@ def create_key():
 
         main_key = getattr(winreg, key_name)
 
+        with winreg.OpenKey(main_key, subpath, 0, winreg.KEY_READ) as parent_key:
+            index = 0
+            while True:
+                try:
+                    subkey_name = winreg.EnumKey(parent_key, index)
+                    if subkey_name == name:
+                        return jsonify({"error": f"Key '{name}' already exists in '{path}'"}), 400
+                    index += 1
+                except OSError:
+                    break
+
         with winreg.CreateKey(main_key, subpath + "\\" + name) as new_key:
-            return jsonify({"message": f"Key '{key_name}' created successfully"}), 201
+            return jsonify({"message": f"Key created successfully"}), 201
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -191,6 +202,7 @@ def delete_key_rec(parent_key, key_name):
                 except OSError:
                     break
         winreg.DeleteKey(parent_key, key_name)
-
+    except FileNotFoundError:
+        raise FileNotFoundError("The system cannot find the file specified")
     except Exception as e:
         print(f"Error deleting key {key_name}: {e}")

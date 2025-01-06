@@ -89,6 +89,10 @@ th{
     transform: translate(-40%, -50%);
 }
 
+#value-popup select{
+    display: block;
+}
+
 #value-menu button{
     display: block;
     width: 100%;

@@ -207,6 +207,8 @@
             const content = document.getElementById('content-val').value;
 
             createValue(path, name, type, content);
+            simulateClickOnKey(path);
+            expandRegistryPath(path);
 
             document.getElementById('value-popup').style.display = 'none';
             overlay.style.display = 'none';
