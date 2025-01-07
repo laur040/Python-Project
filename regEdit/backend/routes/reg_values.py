@@ -25,6 +25,8 @@ def get_registry_values():
                 try:
                     rez = winreg.EnumValue(reg_key, index)
                     value_name, value_val, value_type = rez
+                    if isinstance(value_val, bytes):
+                        value_val = value_val.hex()
                     values.append({"name": value_name, "type": value_type, "value": value_val})
                     index += 1
                 except OSError:
@@ -54,9 +56,37 @@ def create_value():
         "REG_BINARY": winreg.REG_BINARY
     }
 
-    type = val_type.get(type)
-    if type is None:
-        return jsonify({"error": f"Invalid type: {type}"}), 400
+    data_type = val_type.get(type)
+
+    if data_type is None:
+        return jsonify({"error": f"Invalid type: {data_type}"}), 400
+
+    try:
+        if data_type == winreg.REG_SZ:
+            if not isinstance(content, str):
+                return jsonify({"error": f"Content must be a string for type {type}"}), 400
+
+        elif data_type == winreg.REG_DWORD:
+            content = int(content)
+            if not isinstance(content, int):
+                return jsonify({"error": f"Content must be an integer for type {type}"}), 400
+
+        elif data_type == winreg.REG_MULTI_SZ:
+            if not isinstance(content, list) or not all(isinstance(item, str) for item in content):
+                return jsonify({"error": f"Content must be a list of strings for type {type}"}), 400
+
+        elif data_type == winreg.REG_BINARY:
+            if isinstance(content, str):
+                try:
+                    content = bytes.fromhex(content.replace(" ", ""))
+                except ValueError:
+                    return jsonify({"error": f"Content is not a valid hex string for type {type}"}), 400
+
+            elif not isinstance(content, bytes):
+                return jsonify({"error": f"Content must be a bytes object for type {type}"}), 400
+
+    except ValueError as e:
+        return jsonify({"error": f"Invalid content format: {str(e)}"}), 400
 
     try:
         if "\\" not in path:
@@ -67,13 +97,20 @@ def create_value():
 
         main_key = getattr(winreg, key_name)
 
-        with winreg.OpenKey(main_key, subpath, 0, winreg.KEY_WRITE) as key:
-            if type == winreg.REG_DWORD:
-                content = int(content)
+        with winreg.OpenKey(main_key, subpath, 0, winreg.KEY_READ | winreg.KEY_WRITE) as key:
+            index = 0
+            while True:
+                try:
+                    value_name, _, _ = winreg.EnumValue(key, index)
+                    if value_name == name:
+                        return jsonify({"error": f"Value '{name}' already exists in the key '{path}'"}), 400
+                    index += 1
+                except OSError:
+                    break
 
-            winreg.SetValueEx(key, name, 1, type, content)
-
+            winreg.SetValueEx(key, name, 1, data_type, content)
             return jsonify({"message": f"Value '{name}' created successfully"}), 201
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

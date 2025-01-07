@@ -565,6 +565,9 @@
 
     async function createValue(path, name, type, content) {
         const endpoint = "/api/values";
+        if(type == "REG_MULTI_SZ"){
+            content = content.split(",").map(item => item.trim()).filter(item => item);
+        }
         const data = { path: path,
                        name: name,
                        type: type,
