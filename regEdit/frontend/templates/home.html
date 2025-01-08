@@ -205,13 +205,13 @@
             const name = document.getElementById('name-input-val').value;
             const type = document.getElementById('type-val').value;
             const content = document.getElementById('content-val').value;
-
+            if(path && name && type && content){
             createValue(path, name, type, content);
             simulateClickOnKey(path);
             expandRegistryPath(path);
 
             document.getElementById('value-popup').style.display = 'none';
-            overlay.style.display = 'none';
+            overlay.style.display = 'none'; }
         });
 
         overlay.addEventListener('click', function () {});
@@ -399,12 +399,8 @@
             path = document.getElementById('rename-key-path').value;
             if(new_name && path){
                 renameKey(path, new_name);
-                console.log(path);
                 parent_key = path.substring(0, path.lastIndexOf("\\"));
-                console.log(parent_key);
-                simulateClickOnKey(parent_key);
-
-                expandRegistryPath(parent_key);
+<!--                expandRegistryPath(parent_key);-->
 
                 document.getElementById('rename-key-popup').style.display = 'none';
                 document.getElementById('overlay').style.display = 'none';

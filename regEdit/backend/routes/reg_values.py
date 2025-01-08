@@ -5,6 +5,10 @@ register_val_bp = Blueprint("register_val", __name__)
 
 @register_val_bp.route("/api/values", methods=["GET"])
 def get_registry_values():
+    """
+    HTTP GET endpoint to get all the values of a specified key.
+    :return: (JSON) error message or the found values (name, type, value).
+    """
     path = request.args.get("path")
     if not path:
         return jsonify({"error": "No path specified"}), 400
@@ -43,6 +47,10 @@ def get_registry_values():
 
 @register_val_bp.route("/api/values", methods=["POST"])
 def create_value():
+    """
+    HTTP POST endpoint to create a new key.
+    :return: (JSON) success or error message.
+    """
     data = request.json
     path = data.get("path")
     name = data.get("name")
@@ -116,6 +124,10 @@ def create_value():
 
 @register_val_bp.route("/api/values", methods=["DELETE"])
 def delete_value():
+    """
+    HTTP DELETE endpoint to delete a value.
+    :return: (JSON) success or error message.
+    """
     data = request.json
     path = data.get("key")
     name = data.get("name")
@@ -137,6 +149,10 @@ def delete_value():
 
 @register_val_bp.route("/api/values", methods=["PUT"])
 def rename_value():
+    """
+    HTTP PUT endpoint to rename a value.
+    :return: (JSON) success or error message.
+    """
     data = request.json
     path = data.get("key")
     old_name = data.get("old_name")
@@ -152,6 +168,17 @@ def rename_value():
         main_key = getattr(winreg, key_name)
 
         with winreg.OpenKey(main_key, subpath, 0, winreg.KEY_READ | winreg.KEY_WRITE) as key:
+            index = 0
+            while True:
+                try:
+                    value_name, _, _ = winreg.EnumValue(key, index)
+                    if value_name == new_name:
+                        return jsonify({"error": f"Value '{new_name}' already exists in the key '{path}'"}), 400
+                    index += 1
+                except OSError:
+                    break
+
+        with winreg.OpenKey(main_key, subpath, 0, winreg.KEY_READ | winreg.KEY_WRITE) as key:
             value_data, value_type = winreg.QueryValueEx(key, old_name)
             winreg.SetValueEx(key, new_name, 0, value_type, value_data)
             winreg.DeleteValue(key, old_name)
@@ -163,6 +190,10 @@ def rename_value():
 
 @register_val_bp.route("/api/values/edit", methods=["PUT"])
 def edit_value():
+    """
+    HTTP PUT endpoint to edit the content of a value
+    :return: (JSON) success or error message.
+    """
     data = request.json
     path = data.get("key")
     val_name = data.get("val_name")
@@ -188,6 +219,10 @@ def edit_value():
 
 @register_val_bp.route("/api/values/find", methods=["GET"])
 def find_value():
+    """
+    HTTP GET endpoint to find a value name.
+    :return: (JSON) success or error message.
+    """
     val_name = request.args.get("val_name")
     key_path = request.args.get("key")
 
@@ -215,7 +250,15 @@ def find_value():
         return jsonify({"error": str(e)}), 500
 
 
-def search_value_rec(parent_key, subpath, val_name, root_key_name):
+def search_value_rec(parent_key, subpath, val_name, parent_key_name):
+    """
+    Searches for a value name in a specified key and its subkeys.
+    :param parent_key: the main key in which the specified key is located
+    :param subpath: the path of the key that is searched in
+    :param val_name: the name of the value that is searched
+    :param parent_key_name: the name of the main key in which the specified key is located (necessary for building the correct path)
+    :return: None if the value is not found. Otherwise, the full path to the found value
+    """
     try:
         with winreg.OpenKey(parent_key, subpath, 0, winreg.KEY_READ) as key:
             index = 0
@@ -223,7 +266,7 @@ def search_value_rec(parent_key, subpath, val_name, root_key_name):
                 try:
                     value_name, _, _ = winreg.EnumValue(key, index)
                     if value_name == val_name:
-                        return f"{root_key_name}\\{subpath}" if subpath else root_key_name
+                        return f"{parent_key_name}\\{subpath}" if subpath else parent_key_name
                     index += 1
                 except OSError:
                     break
@@ -233,7 +276,7 @@ def search_value_rec(parent_key, subpath, val_name, root_key_name):
                 try:
                     subkey_name = winreg.EnumKey(key, index)
                     next_subpath = f"{subpath}\\{subkey_name}" if subpath else subkey_name
-                    found = search_value_rec(parent_key, next_subpath, val_name, root_key_name)
+                    found = search_value_rec(parent_key, next_subpath, val_name, parent_key_name)
                     if found:
                         return found
                     index += 1

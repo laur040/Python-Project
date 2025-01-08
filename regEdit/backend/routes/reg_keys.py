@@ -4,6 +4,11 @@ import winreg
 register_key_bp = Blueprint("register_key", __name__)
 
 def get_subkeys(path):
+    """
+    Gets the direct subkeys for a specific key.
+    :param path: the path for the specific key
+    :return: a dictonary with the key 'error' and a key that is either the error message, either the found subkeys.
+    """
     subkeys = []
 
     try:
@@ -50,6 +55,10 @@ def get_subkeys(path):
 
 @register_key_bp.route("/api/keys", methods=["GET"])
 def get_registry_subkeys():
+    """
+     HTTP GET endpoint to get all the subkeys of a specified key.
+    :return: (JSON) the found subkeys or an error message.
+    """
     path = request.args.get("path")
     if not path:
         return jsonify({"HKEY_CLASSES_ROOT": [],
@@ -65,6 +74,10 @@ def get_registry_subkeys():
 
 @register_key_bp.route("/api/keys", methods=["POST"])
 def create_key():
+    """
+    HTTP POST endpoint to creates a new key.
+    :return: (JSON) success or error message.
+    """
     data = request.json
     path = data.get("path")
     name = data.get("name")
@@ -98,12 +111,18 @@ def create_key():
 
 @register_key_bp.route("/api/keys", methods=["DELETE"])
 def delete_key():
+    """
+    HTTP DELETE endpoint to delete a key and all its subkeys.
+    :return: (JSON) success or error message.
+    """
     data = request.json
     path = data.get("key")
 
     try:
         if "\\" not in path:
             key_name = path
+            if key_name in ["HKEY_CLASSES_ROOT", "HKEY_CURRENT_USER", "HKEY_LOCAL_MACHINE", "HKEY_USERS", "HKEY_CURRENT_CONFIG"]:
+                return jsonify({"error": "Impossible to delete root key"}), 400
             subpath = ""
         else:
             key_name, subpath = path.split("\\", 1)
@@ -117,13 +136,17 @@ def delete_key():
 
 @register_key_bp.route("/api/keys", methods=["PUT"])
 def rename_key():
+    """
+    HTTP PUT endpoint to rename a specified key.
+    :return: (JSON) success or error message.
+    """
     data = request.json
     path = data.get("path")
     new_name = data.get("new_name")
 
     try:
         if "\\" not in path:
-            return jsonify({"error": "Invalid path format"}), 400
+            return jsonify({"error": "Impossible to rename root key"}), 400
 
         key_name, subpath = path.split("\\", 1)
 
@@ -134,8 +157,16 @@ def rename_key():
             old_key_name = subpath
 
         main_key = getattr(winreg, key_name)
-        print(parent_path)
-        print(new_name)
+        with winreg.OpenKey(main_key, parent_path, 0, winreg.KEY_READ | winreg.KEY_WRITE) as parent_key:
+            index = 0
+            while True:
+                try:
+                    subkey_name = winreg.EnumKey(parent_key, index)
+                    if subkey_name == new_name:
+                        return jsonify({"error": f"Key '{new_name}' already exists in the parent key"}), 400
+                    index += 1
+                except OSError:
+                    break
 
         with winreg.OpenKey(main_key, parent_path, 0, winreg.KEY_READ | winreg.KEY_WRITE) as parent_key:
             with winreg.CreateKey(parent_key, new_name) as new_key:
@@ -148,7 +179,6 @@ def rename_key():
                             index += 1
                         except OSError:
                             break
-
 
                     index = 0
                     while True:
@@ -171,6 +201,12 @@ def rename_key():
         return jsonify({"error": str(e)}), 500
 
 def copy_key_rec(old_key, new_key):
+    """
+    Copies all the values and subkeys of a specified key in a new key in a recursive manner.
+    :param old_key: the path for the key that is going to be copied
+    :param new_key: the name of the destination key
+    :return: nothing
+    """
     index = 0
     while True:
         try:
@@ -192,6 +228,12 @@ def copy_key_rec(old_key, new_key):
             break
 
 def delete_key_rec(parent_key, key_name):
+    """
+    Deletes a specified key and all of its subkeys in a recursive manner.
+    :param parent_key: the path of the parent key of the specified key
+    :param key_name: the name of the key that is going to be deleted
+    :return: nothing
+    """
     try:
         with winreg.OpenKey(parent_key, key_name, 0, winreg.KEY_READ | winreg.KEY_WRITE) as key:
             while True:
